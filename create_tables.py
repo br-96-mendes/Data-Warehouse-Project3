@@ -1,6 +1,7 @@
 import configparser
 import psycopg2
 from sql_queries import create_table_queries, drop_table_queries
+from iac import *
 
 def drop_tables(cur, conn):
     for query in drop_table_queries:
@@ -32,6 +33,8 @@ def main():
 
     conn.close()
 
-
 if __name__ == "__main__":
-    main()
+    create_redshift_cluster()
+    #redshift = create_redshift_cluster(roleArn)
+    #redshift = open_tcp_port(redshift)
+    #main()

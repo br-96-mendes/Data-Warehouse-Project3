@@ -45,15 +45,16 @@ def create_iam():
 
         roleArn = iam.get_role(RoleName=DWH_IAM_ROLE_NAME)['Role']['Arn']
         config.set('IAM_ROLE', 'ARN', roleArn)
+
         print('Role Policy Attached!')
 
     except Exception as e:
         print(e)
 
-    return iam
+    with open('dwh.cfg', 'w') as configfile:
+        config.write(configfile)
 
-
-def create_redshift_cluster(roleArn):
+def create_redshift_cluster():
 
     config = configparser.ConfigParser()
     config.read_file(open('dwh.cfg'))
@@ -69,16 +70,10 @@ def create_redshift_cluster(roleArn):
     DWH_DB_PASSWORD = config.get('CLUSTER', 'DWH_DB_PASSWORD')
     DWH_CLUSTER_IDENTIFIER = config.get('CLUSTER', 'DWH_CLUSTER_IDENTIFIER')
     DWH_PORT = config.get('CLUSTER', 'DWH_PORT')
+    roleArn = config.get('IAM_ROLE', 'ARN')
 
     redshift = boto3.client(
         'redshift',
-        region_name='us-west-2',
-        aws_access_key_id=KEY,
-        aws_secret_access_key=SECRET
-    )
-
-    ec2 = boto3.resource(
-        'ec2',
         region_name='us-west-2',
         aws_access_key_id=KEY,
         aws_secret_access_key=SECRET
@@ -98,11 +93,30 @@ def create_redshift_cluster(roleArn):
     except Exception as e:
         print(e)
 
-    redshift_props = redshift.describe_cluster(ClusterIdentifier=DWH_CLUSTER_IDENTIFIER)['Clusters'][0]
-    redshift_endpoint = redshift_props['Endpoint']['Address']
-    redshift_vpcid = redshift_props['VpcId']
+    fl_created = False
+    seconds_to_stop = 500
 
+    while fl_created == False and seconds_to_stop > 0:
+        time.sleep(15)
+        redshift_props = redshift.describe_clusters(ClusterIdentifier=DWH_CLUSTER_IDENTIFIER)['Clusters'][0]
+        redshift_status = redshift_props['ClusterStatus']
+        if redshift_status != 'available':
+            print('Creating redshift')
+            seconds_to_stop = seconds_to_stop - 15
+        else:
+            fl_created = True
+            print('Redshift created!')
+            redshift_endpoint = redshift_props['Endpoint']['Address']
+            redshift_vpcid = redshift_props['VpcId']
+    
     config.set('CLUSTER', 'HOST', redshift_endpoint)
+
+    ec2 = boto3.resource(
+        'ec2',
+        region_name='us-west-2',
+        aws_access_key_id=KEY,
+        aws_secret_access_key=SECRET
+    )
 
     try:
         vpc = ec2.Vpc(id=redshift_vpcid)
@@ -118,49 +132,47 @@ def create_redshift_cluster(roleArn):
     except Exception as e:
         print(e)
 
+    with open('dwh.cfg', 'w') as configfile:
+        config.write(configfile)
+    
     return redshift
-
-def delete_cluster(redshift):
+    
+def delete_cluster():
 
     config = configparser.ConfigParser()
     config.read_file(open('dwh.cfg'))
     
     DWH_CLUSTER_IDENTIFIER = config.get('CLUSTER', 'DWH_CLUSTER_IDENTIFIER')
+    KEY = config.get('AWS', 'KEY')
+    SECRET = config.get('AWS', 'SECRET')
+
+    redshift = boto3.client(
+        'redshift',
+        region_name='us-west-2',
+        aws_access_key_id=KEY,
+        aws_secret_access_key=SECRET
+    )
 
     redshift.delete_cluster(ClusterIdentifier=DWH_CLUSTER_IDENTIFIER,  SkipFinalClusterSnapshot=True)
 
-    return None
 
 def delete_iam(iam):
     
     config = configparser.ConfigParser()
     config.read_file(open('dwh.cfg'))
     
+    KEY = config.get('AWS', 'KEY')
+    SECRET = config.get('AWS', 'SECRET')
     DWH_IAM_ROLE_NAME = config.get('CLUSTER', 'DWH_IAM_ROLE_NAME')
+
+    iam = boto3.client(
+        'iam',
+        region_name='us-west-2',
+        aws_access_key_id=KEY,
+        aws_secret_access_key=SECRET
+    )
 
     iam.detach_role_policy(RoleName=DWH_IAM_ROLE_NAME, PolicyArn="arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess")
     iam.delete_role(RoleName=DWH_IAM_ROLE_NAME)
 
     return None
-
-def set_timeout_redshift(minutes, redshift):
-
-    config = configparser.ConfigParser()
-    config.read_file(open('dwh.cfg'))
-
-    DWH_CLUSTER_IDENTIFIER = config.get('CLUSTER', 'DWH_CLUSTER_IDENTIFIER')
-
-    seconds = minutes * 60
-    starttime = time.time()
-    fl_redshift_created = False
-    while fl_redshift_created == False:
-        print("Creating Redshift")
-        time.sleep(seconds - ((time.time() - starttime) % 2.0))
-        redshift_props = redshift.describe_cluster(ClusterIdentifier=DWH_CLUSTER_IDENTIFIER)['Clusters'][0]
-        redshift_status = redshift_props['ClusterStatus']
-        if redshift_status == 'available':
-            fl_redshift_created = True
-        
-    print('Redshift created!')
-    return None
-
