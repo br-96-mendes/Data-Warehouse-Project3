@@ -4,6 +4,12 @@ import configparser
 config = configparser.ConfigParser()
 config.read('dwh.cfg')
 
+LOG_DATA = config.get('S3', 'LOG_DATA')
+LOG_JSONPATH = config.get('S3', 'LOG_JSONPATH')
+SONG_DATA = config.get('S3', 'SONG_DATA')
+ARN = config.get('IAM_ROLE', 'ARN')
+REGION = config.get('CLUSTER', 'DWH_REGION')
+
 # DROP TABLES
 
 staging_events_table_drop = "DROP TABLE IF EXISTS staging_events"
@@ -119,14 +125,16 @@ time_table_create = ("""
 staging_events_copy = ("""
     COPY staging_events FROM {}
     CREDENTIALS 'aws_iam_role={}'
+    JSON {}
     REGION {}
-""").format()
+""").format(LOG_DATA, ARN, LOG_JSONPATH, REGION)
 
 staging_songs_copy = ("""
     COPY staging_songs FROM {}
     CREDENTIALS 'aws_iam_role={}'
+    JSON {}
     REGION {}
-""").format()
+""").format(SONG_DATA, ARN, REGION)
 
 # FINAL TABLES
 
