@@ -176,3 +176,7 @@ def delete_iam(iam):
     iam.delete_role(RoleName=DWH_IAM_ROLE_NAME)
 
     return None
+
+if __name__ == '__main__':
+    create_iam()
+    create_redshift_cluster()
