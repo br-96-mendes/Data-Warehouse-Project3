@@ -1,8 +1,8 @@
 import configparser
-import psycopg2
 import boto3
 import pandas as pd
 import json
+import time
 
 def create_iam():
 
@@ -142,3 +142,25 @@ def delete_iam(iam):
     iam.delete_role(RoleName=DWH_IAM_ROLE_NAME)
 
     return None
+
+def set_timeout_redshift(minutes, redshift):
+
+    config = configparser.ConfigParser()
+    config.read_file(open('dwh.cfg'))
+
+    DWH_CLUSTER_IDENTIFIER = config.get('CLUSTER', 'DWH_CLUSTER_IDENTIFIER')
+
+    seconds = minutes * 60
+    starttime = time.time()
+    fl_redshift_created = False
+    while fl_redshift_created == False:
+        print("Creating Redshift")
+        time.sleep(seconds - ((time.time() - starttime) % 2.0))
+        redshift_props = redshift.describe_cluster(ClusterIdentifier=DWH_CLUSTER_IDENTIFIER)['Clusters'][0]
+        redshift_status = redshift_props['ClusterStatus']
+        if redshift_status == 'available':
+            fl_redshift_created = True
+        
+    print('Redshift created!')
+    return None
+
