@@ -62,7 +62,7 @@ staging_songs_table_create = ("""
 
 songplay_table_create = ("""
     CREATE TABLE IF NOT EXISTS songplays (
-        songplay_id IDENTITY(0,1) PRIMARY KEY,
+        songplay_id INT IDENTITY(0,1) PRIMARY KEY,
         start_time TIMESTAMP NOT NULL,
         user_id INTEGER NOT NULL,
         level TEXT,
@@ -126,13 +126,14 @@ staging_events_copy = ("""
     COPY staging_events FROM {}
     CREDENTIALS 'aws_iam_role={}'
     JSON {}
-    REGION {}
+    REGION '{}';
 """).format(LOG_DATA, ARN, LOG_JSONPATH, REGION)
 
 staging_songs_copy = ("""
     COPY staging_songs FROM {}
     CREDENTIALS 'aws_iam_role={}'
-    REGION {}
+    JSON 'auto'
+    REGION '{}';
 """).format(SONG_DATA, ARN, REGION)
 
 # FINAL TABLES
@@ -140,21 +141,22 @@ staging_songs_copy = ("""
 songplay_table_insert = ("""
     INSERT INTO songplays (start_time, user_id, level, song_id, artist_id, session_id, location, user_agent)
     SELECT
-        TO_TIMESTAMP(ts::double precision / 1000) AS start_time,
+        (TIMESTAMP 'epoch' + ts/1000 * INTERVAL '1 Second ') AS start_time,
         user_id,
         level,
         song_id,
         artist_id,
         session_id,
         location,
-        user_agent,
+        user_agent
     FROM staging_events AS se
-    LEFT JOIN stagint_songs AS ss ON se.song = ss.title
+    LEFT JOIN staging_songs AS ss ON se.song = ss.title
                                  AND se.artist = ss.artist_name
-                                 AND se.length = ss.duration
+    WHERE page = 'NextSong'
 """)
 
 user_table_insert = ("""
+    INSERT INTO users (user_id, first_name, last_name, gender, level)
     WITH user_more_recent_info AS (
         SELECT user_id,
                MAX(ts) AS more_recent_ts
@@ -162,14 +164,13 @@ user_table_insert = ("""
         WHERE page = 'NextSong'
         GROUP BY user_id
     )
-    INSERT INTO users (user_id, first_name, last_name, gender, level)
     SELECT 
-        user_id,
+        se.user_id,
         first_name,
         last_name,
         gender,
         level
-    FROM staging_events AS AS se
+    FROM staging_events AS se
     INNER JOIN user_more_recent_info AS umri ON se.ts = umri.more_recent_ts
                                             AND se.user_id = umri.user_id
 """)
@@ -199,15 +200,15 @@ artist_table_insert = ("""
 time_table_insert = ("""
     INSERT INTO time (start_time, hour, day, week, month, year, weekday)
     SELECT
-        TO_TIMESTAMP(ts::double precision / 1000) AS start_time,
-        DATE_PART('hour', TO_TIMESTAMP(ts::double precision / 1000)) AS hour,
-        DATE_PART('day', TO_TIMESTAMP(ts::double precision / 1000)) AS day,
-        DATE_PART('week', TO_TIMESTAMP(ts::double precision / 1000)) AS week,
-        DATE_PART('month', TO_TIMESTAMP(ts::double precision / 1000)) AS month,
-        DATE_PART('year', TO_TIMESTAMP(ts::double precision / 1000)) AS year,
-        DATE_PART('dow', TO_TIMESTAMP(ts::double precision / 1000)) AS weekday
+        (TIMESTAMP 'epoch' + ts/1000 * INTERVAL '1 Second ') AS start_time,
+        DATE_PART('hour', (TIMESTAMP 'epoch' + ts/1000 * INTERVAL '1 Second ')) AS hour,
+        DATE_PART('day', (TIMESTAMP 'epoch' + ts/1000 * INTERVAL '1 Second ')) AS day,
+        DATE_PART('week', (TIMESTAMP 'epoch' + ts/1000 * INTERVAL '1 Second ')) AS week,
+        DATE_PART('month', (TIMESTAMP 'epoch' + ts/1000 * INTERVAL '1 Second ')) AS month,
+        DATE_PART('year', (TIMESTAMP 'epoch' + ts/1000 * INTERVAL '1 Second ')) AS year,
+        DATE_PART('dow', (TIMESTAMP 'epoch' + ts/1000 * INTERVAL '1 Second ')) AS weekday
     FROM staging_events
-    WHERE page = 'NextSongs'
+    WHERE page = 'NextSong'
 """)
 
 # QUERY LISTS
@@ -215,12 +216,11 @@ time_table_insert = ("""
 create_table_queries = [
     staging_events_table_create,
     staging_songs_table_create,
-    songplay_table_create,
     user_table_create,
     song_table_create,
     artist_table_create,
-    time_table_create
-
+    time_table_create,
+    songplay_table_create
 ]
 
 drop_table_queries = [

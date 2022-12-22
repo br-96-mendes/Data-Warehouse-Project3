@@ -22,7 +22,8 @@ def main():
         config['CLUSTER']['HOST'],
         config['CLUSTER']['DWH_DB'],
         config['CLUSTER']['DWH_DB_USER'],
-        config['CLUSTER']['DWH_DB_PASSWORD']
+        config['CLUSTER']['DWH_DB_PASSWORD'],
+        config['CLUSTER']['DWH_PORT']
     ]
 
     conn = psycopg2.connect("host={} dbname={} user={} password={} port={}".format(*cluster_params))
@@ -34,7 +35,4 @@ def main():
     conn.close()
 
 if __name__ == "__main__":
-    create_redshift_cluster()
-    #redshift = create_redshift_cluster(roleArn)
-    #redshift = open_tcp_port(redshift)
-    #main()
+    main()
