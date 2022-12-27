@@ -5,6 +5,14 @@ import json
 import time
 
 def create_iam():
+    """
+    This function reads environment variables (KEY, SECRET and DWH_IAM_ROLE_NAME),
+    instanciates a iam client, create the role (that allows Redshift clusters to 
+    call AWS services on your behalf) and overwrite RoleArn
+    
+    OUTPUT
+        Nothing
+    """
 
     config = configparser.ConfigParser()
     config.read_file(open('dwh.cfg'))
@@ -55,6 +63,15 @@ def create_iam():
         config.write(configfile)
 
 def create_redshift_cluster():
+    """
+    This function reads environment variables (DWH_CLUSTER_TYPE, DWH_NODE_TYPE, DWH_NUM_NODES,
+    DWH_DB, DWH_DB_USER, DWH_DB_PASSWORD, DWH_CLUSTER_IDENTIFIER, DWH_PORT and IAM_ROLE_ARN),
+    instanciates a redshift client, commands to create the cluster, waits Redshift status become 
+    available, saves the endpint and open access to Redshift.
+
+    OUTPUT
+        Nothing
+    """
 
     config = configparser.ConfigParser()
     config.read_file(open('dwh.cfg'))
@@ -135,6 +152,14 @@ def create_redshift_cluster():
     with open('dwh.cfg', 'w') as configfile:
         config.write(configfile)
 
-if __name__ == '__main__':
+def main():
+    """
+    This function creates and opens access to Redshif cluster.
+    """
+
     create_iam()
     create_redshift_cluster()
+
+
+if __name__ == '__main__':
+    main()

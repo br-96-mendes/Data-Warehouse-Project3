@@ -2,6 +2,9 @@ import configparser
 import boto3
 
 def delete_cluster():
+    """
+    This function deletes the Redshift cluster.
+    """
 
     config = configparser.ConfigParser()
     config.read_file(open('dwh.cfg'))
@@ -20,7 +23,10 @@ def delete_cluster():
     redshift.delete_cluster(ClusterIdentifier=DWH_CLUSTER_IDENTIFIER,  SkipFinalClusterSnapshot=True)
 
 def delete_iam():
-    
+    """
+    This function deletes the Redshift Role.
+    """
+
     config = configparser.ConfigParser()
     config.read_file(open('dwh.cfg'))
     
@@ -40,6 +46,14 @@ def delete_iam():
 
     return None
 
-if __name__ == '__main__':
+def main():
+    """
+    This function deletes Redshift cluster and IAM Role.
+    """
+
     delete_cluster()
     delete_iam()
+
+
+if __name__ == '__main__':
+    main()
