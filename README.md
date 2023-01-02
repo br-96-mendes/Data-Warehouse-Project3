@@ -1,4 +1,4 @@
-<h1> Project: Data Modeling with Postgres </h1>
+<h1> Project: Data Warehouse </h1>
 
 A music streaming startup, Sparkify, has grown their user base and song database and want to move their processes and data onto the cloud. Their data resides in S3, in a directory of JSON logs on user activity on the app, as well as a directory with JSON metadata on the songs in their app.
 
@@ -67,7 +67,9 @@ The instances of these two objects were extract, transform and load into the Rel
 
 <h1> Data Model </h1>
 
-The relational database contains the following tables:
+staging_songs - STG related to songs;
+
+staging_events - STG related to events;
 
 time - DIM related to time;
 
@@ -79,7 +81,7 @@ songs - DIM related to the songs played in the app;
 
 songplays - FATO related to the playing songs in the app;
 
-![Alt text](images/entity_diagram.png "Star schema")
+![Alt text](images/data_modeling_project3.png "Star schema")
 
 <h1> Running the Pipeline </h1>
 
