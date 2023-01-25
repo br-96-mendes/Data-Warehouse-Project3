@@ -63,7 +63,7 @@ Song_data brings information regarding each music (song_id, title, duration, yea
     "year": 1969
     }
 ```
-The instances of these two objects were extract, transform and load into the Relational Database. The data is originally located on a Bucket S3.
+The instances of these two objects were extract, transform and load into a Data Warehouse, using Redshift. The data is originally located on a Bucket S3.
 
 <h1> Data Model </h1>
 
